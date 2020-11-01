@@ -86,6 +86,58 @@ func TestTCPClientDisconnectSuccess(t *testing.T) {
 	assert.NoError(t, err)
 }
 
+func TestTCPClientAddrNotConnected(t *testing.T) {
+	c, err := client.NewTCPClient(10)
+	assert.NotNil(t, c)
+	assert.NoError(t, err)
+
+	addr, err := c.Addr()
+	assert.Nil(t, addr)
+	assert.IsType(t, &common.NotConnectedErr{}, err)
+}
+
+func TestTCPClientAddrSuccess(t *testing.T) {
+	c, err := client.NewTCPClient(10)
+	assert.NotNil(t, c)
+	assert.NoError(t, err)
+
+	listener, err := nettest.NewLocalListener("tcp")
+	assert.NoError(t, err)
+
+	err = c.Connect(listener.Addr().String())
+	assert.NoError(t, err)
+
+	addr, err := c.Addr()
+	assert.NotNil(t, addr)
+	assert.NoError(t, err)
+}
+
+func TestTCPClientServerAddrNotConnected(t *testing.T) {
+	c, err := client.NewTCPClient(10)
+	assert.NotNil(t, c)
+	assert.NoError(t, err)
+
+	addr, err := c.ServerAddr()
+	assert.Nil(t, addr)
+	assert.IsType(t, &common.NotConnectedErr{}, err)
+}
+
+func TestTCPClientServerAddrSuccess(t *testing.T) {
+	c, err := client.NewTCPClient(10)
+	assert.NotNil(t, c)
+	assert.NoError(t, err)
+
+	listener, err := nettest.NewLocalListener("tcp")
+	assert.NoError(t, err)
+
+	err = c.Connect(listener.Addr().String())
+	assert.NoError(t, err)
+
+	addr, err := c.ServerAddr()
+	assert.NotNil(t, addr)
+	assert.NoError(t, err)
+}
+
 func TestTCPClientSendPacketNotConnected(t *testing.T) {
 	c, err := client.NewTCPClient(10)
 	assert.NotNil(t, c)

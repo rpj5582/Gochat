@@ -61,6 +61,24 @@ func (c *TCPClient) Disconnect() error {
 	return nil
 }
 
+func (c *TCPClient) Addr() (net.Addr, error) {
+	if !c.isConnected {
+		return nil, &common.NotConnectedErr{}
+
+	}
+
+	return c.conn.LocalAddr(), nil
+}
+
+func (c *TCPClient) ServerAddr() (net.Addr, error) {
+	if !c.isConnected {
+		return nil, &common.NotConnectedErr{}
+
+	}
+
+	return c.conn.RemoteAddr(), nil
+}
+
 func (c *TCPClient) SendPacket(p common.Packet) error {
 	if !c.isConnected {
 		return &common.NotConnectedErr{}
