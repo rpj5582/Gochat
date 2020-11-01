@@ -144,6 +144,62 @@ func TestTCPServerSendPacketSuccess(t *testing.T) {
 	wg.Wait()
 }
 
+func TestTCPServerBroadcastPacket(t *testing.T) {
+	s, err := server.NewTCPServer(10, func(clientAddr string) {}, func(clientAddr string, err error) {})
+	assert.NotNil(t, s)
+	assert.NoError(t, err)
+
+	err = s.RegisterPacketType(&TestPacket{}, func(conn net.Conn, p common.Packet) {
+		s.BroadcastPacket(p)
+	})
+	assert.NoError(t, err)
+
+	go func() {
+		err = s.Start("0")
+		assert.IsType(t, &common.AcceptErr{}, err)
+	}()
+
+	time.Sleep(time.Millisecond * 10)
+
+	conn1, err := net.Dial("tcp", s.Addr().String())
+	assert.NoError(t, err)
+
+	conn2, err := net.Dial("tcp", s.Addr().String())
+	assert.NoError(t, err)
+
+	result1 := []byte{}
+	result2 := []byte{}
+	var wg sync.WaitGroup
+	wg.Add(1)
+	go func() {
+		incoming := []byte{0}
+		incoming = append(incoming, []byte("test data")...)
+		_, err := conn1.Write(incoming)
+		assert.NoError(t, err)
+
+		buffer := [5]byte{}
+		_, err = conn1.Read(buffer[:])
+		assert.NoError(t, err)
+
+		result1 = buffer[:]
+		wg.Done()
+	}()
+
+	wg.Add(1)
+	go func() {
+		buffer := [5]byte{}
+		_, err := conn2.Read(buffer[:])
+		assert.NoError(t, err)
+
+		result2 = buffer[:]
+		wg.Done()
+	}()
+
+	wg.Wait()
+
+	assert.Equal(t, result1, result2)
+}
+
 func TestTCPServerReceivePacketDisconnected(t *testing.T) {
 	s, err := server.NewTCPServer(10, nil, nil)
 	assert.NotNil(t, s)

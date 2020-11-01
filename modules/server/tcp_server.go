@@ -129,6 +129,15 @@ func (s *TCPServer) SendPacket(conn net.Conn, p common.Packet) error {
 	return nil
 }
 
+func (s *TCPServer) BroadcastPacket(p common.Packet) {
+	s.connMutex.Lock()
+	defer s.connMutex.Unlock()
+
+	for conn := range s.connections {
+		s.SendPacket(conn, p)
+	}
+}
+
 func (s *TCPServer) ReceivePacket(conn net.Conn) error {
 	packetBuffer := make([]byte, s.maxPacketSize)
 
