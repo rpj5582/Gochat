@@ -15,6 +15,9 @@ type Server interface {
 	// Stop disconnects all clients and shuts down the server
 	Stop()
 
+	// Addr returns the address of the server
+	Addr() net.Addr
+
 	// SendPacket sends the given packet to a given connection
 	SendPacket(conn net.Conn, p common.Packet) error
 

@@ -64,7 +64,6 @@ func (c *TCPClient) Disconnect() error {
 func (c *TCPClient) Addr() (net.Addr, error) {
 	if !c.isConnected {
 		return nil, &common.NotConnectedErr{}
-
 	}
 
 	return c.conn.LocalAddr(), nil
@@ -73,7 +72,6 @@ func (c *TCPClient) Addr() (net.Addr, error) {
 func (c *TCPClient) ServerAddr() (net.Addr, error) {
 	if !c.isConnected {
 		return nil, &common.NotConnectedErr{}
-
 	}
 
 	return c.conn.RemoteAddr(), nil

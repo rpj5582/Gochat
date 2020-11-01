@@ -27,7 +27,11 @@ type TCPServer struct {
 
 // NewTCPServer returns an initialized TCP server ready to start
 // listening for incoming client connections
-func NewTCPServer(onClientConnected func(clientAddr string), onClientDisconnected func(clientAddr string, err error), maxPacketSize int) *TCPServer {
+func NewTCPServer(maxPacketSize int, onClientConnected func(clientAddr string), onClientDisconnected func(clientAddr string, err error)) (*TCPServer, error) {
+	if maxPacketSize < 1 {
+		return nil, &common.InvalidMaxPacketSizeErr{Size: maxPacketSize}
+	}
+
 	return &TCPServer{
 		registeredPackets: make(map[uint8]struct {
 			packet   common.Packet
@@ -37,7 +41,7 @@ func NewTCPServer(onClientConnected func(clientAddr string), onClientDisconnecte
 		connections:          make(map[net.Conn]struct{}),
 		onClientConnected:    onClientConnected,
 		onClientDisconnected: onClientDisconnected,
-	}
+	}, nil
 }
 
 func (s *TCPServer) Start(port string) error {
@@ -73,7 +77,7 @@ func (s *TCPServer) Start(port string) error {
 			for {
 				if err = s.ReceivePacket(conn); err != nil {
 					switch err.(type) {
-					case common.DisconnectErr:
+					case *common.DisconnectErr:
 						err = nil
 					}
 
@@ -87,12 +91,23 @@ func (s *TCPServer) Start(port string) error {
 }
 
 func (s *TCPServer) Stop() {
+	s.connMutex.Lock()
+	defer s.connMutex.Unlock()
+
 	for conn := range s.connections {
 		conn.Close()
 	}
 
 	s.connections = nil
 	s.listener.Close()
+}
+
+func (s *TCPServer) Addr() net.Addr {
+	if s.listener != nil {
+		return s.listener.Addr()
+	}
+
+	return nil
 }
 
 func (s *TCPServer) SendPacket(conn net.Conn, p common.Packet) error {
@@ -105,7 +120,7 @@ func (s *TCPServer) SendPacket(conn net.Conn, p common.Packet) error {
 	}
 
 	if _, err := conn.Write(packetBuffer[:n+1]); err != nil {
-		return common.SendErr{
+		return &common.SendErr{
 			PacketID: p.ID(),
 			Err:      err,
 		}
@@ -116,6 +131,7 @@ func (s *TCPServer) SendPacket(conn net.Conn, p common.Packet) error {
 
 func (s *TCPServer) ReceivePacket(conn net.Conn) error {
 	packetBuffer := make([]byte, s.maxPacketSize)
+
 	n, err := conn.Read(packetBuffer)
 	if err != nil {
 		if netErr, ok := err.(net.Error); ok && netErr.Timeout() {
@@ -123,14 +139,14 @@ func (s *TCPServer) ReceivePacket(conn net.Conn) error {
 		}
 
 		if err == io.EOF {
-			return common.DisconnectErr{}
+			return &common.DisconnectErr{}
 		}
 
-		return common.ReceiveErr{Err: err}
+		return &common.ReceiveErr{Err: err}
 	}
 
 	if n < 1 {
-		return common.ReceiveErr{Err: errors.New("received empty packet")}
+		return &common.ReceiveErr{Err: errors.New("received empty packet")}
 	}
 
 	packetID := packetBuffer[0]

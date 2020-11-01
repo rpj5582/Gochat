@@ -28,7 +28,12 @@ func main() {
 		port = "20000"
 	}
 
-	server := server.NewTCPServer(onClientConnected, onClientDisconnected, 65535)
+	server, err := server.NewTCPServer(65535, onClientConnected, onClientDisconnected)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+
 	server.RegisterPacketType(&shared.PingPacket{}, nil)
 	server.RegisterPacketType(&shared.PongPacket{}, func(conn net.Conn, p common.Packet) {
 		server.SendPacket(conn, p)
