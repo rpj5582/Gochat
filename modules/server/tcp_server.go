@@ -129,12 +129,14 @@ func (s *TCPServer) SendPacket(conn net.Conn, p common.Packet) error {
 	return nil
 }
 
-func (s *TCPServer) BroadcastPacket(p common.Packet) {
+func (s *TCPServer) BroadcastPacket(p common.Packet, connToExclude net.Conn) {
 	s.connMutex.Lock()
 	defer s.connMutex.Unlock()
 
 	for conn := range s.connections {
-		s.SendPacket(conn, p)
+		if conn != connToExclude {
+			s.SendPacket(conn, p)
+		}
 	}
 }
 

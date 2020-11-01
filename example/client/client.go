@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"net"
 	"os"
-	"os/signal"
 	"strings"
 
 	"github.com/rpj5582/gochat/example/shared"
@@ -69,15 +68,23 @@ func main() {
 		}
 	}()
 
-	// Send a test message
-	messagePacket := shared.MessagePacket{Message: "hello world"}
-	if err := client.SendPacket(&messagePacket); err != nil {
-		fmt.Println(err)
-		client.Disconnect()
-		return
-	}
+	for {
+		message, err := reader.ReadString('\n')
+		if err != nil {
+			fmt.Printf("error reading input message: %v\n", err)
+			return
+		}
 
-	sigChannel := make(chan os.Signal, 1)
-	signal.Notify(sigChannel, os.Interrupt)
-	<-sigChannel
+		message = strings.Trim(message, " \t\r\n")
+		if message == "" {
+			continue
+		}
+
+		messagePacket := shared.MessagePacket{Message: message}
+		if err := client.SendPacket(&messagePacket); err != nil {
+			fmt.Println(err)
+			client.Disconnect()
+			return
+		}
+	}
 }

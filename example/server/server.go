@@ -39,7 +39,7 @@ func main() {
 		server.SendPacket(conn, p)
 	})
 	server.RegisterPacketType(&shared.MessagePacket{}, func(conn net.Conn, p common.Packet) {
-		server.SendPacket(conn, p)
+		server.BroadcastPacket(p, conn)
 	})
 
 	go func() {
