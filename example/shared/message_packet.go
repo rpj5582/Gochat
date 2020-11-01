@@ -11,15 +11,11 @@ type MessagePacket struct {
 }
 
 func (p MessagePacket) ID() uint8 {
-	return 2
+	return MessagePacketID
 }
 
 func (p *MessagePacket) Write(buffer []byte) (int, error) {
 	messageLength := binary.LittleEndian.Uint16(buffer)
-
-	if messageLength == 0 {
-		return 2, nil
-	}
 
 	if messageLength > uint16(len(buffer)) {
 		return 2, fmt.Errorf("failed to read message packet: message length %d longer than buffer length %d", messageLength, len(buffer))

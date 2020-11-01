@@ -56,12 +56,12 @@ func TestTCPServerStart(t *testing.T) {
 
 	var conn net.Conn
 
-	onClientConnected := func(clientAddr string) {
+	onClientConnected := func(clientID server.ClientID) {
 		time.Sleep(time.Millisecond * 10)
 		conn.Close()
 	}
 
-	onClientDisconnected := func(clientAddr string, err error) {
+	onClientDisconnected := func(clientID server.ClientID, err error) {
 		assert.NoError(t, err)
 		cancelFunc()
 	}
@@ -158,7 +158,7 @@ func TestTCPServerSendPacketSuccess(t *testing.T) {
 }
 
 func TestTCPServerBroadcastPacketToAll(t *testing.T) {
-	s, err := server.NewTCPServer(10, func(clientAddr string) {}, func(clientAddr string, err error) {})
+	s, err := server.NewTCPServer(10, func(clientID server.ClientID) {}, func(clientID server.ClientID, err error) {})
 	assert.NotNil(t, s)
 	assert.NoError(t, err)
 
@@ -214,7 +214,7 @@ func TestTCPServerBroadcastPacketToAll(t *testing.T) {
 }
 
 func TestTCPServerBroadcastPacketExcludeSender(t *testing.T) {
-	s, err := server.NewTCPServer(10, func(clientAddr string) {}, func(clientAddr string, err error) {})
+	s, err := server.NewTCPServer(10, func(clientID server.ClientID) {}, func(clientID server.ClientID, err error) {})
 	assert.NotNil(t, s)
 	assert.NoError(t, err)
 

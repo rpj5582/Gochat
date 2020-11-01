@@ -21,15 +21,15 @@ type TCPServer struct {
 	connections map[ClientID]net.Conn
 	connMutex   sync.RWMutex
 
-	onClientConnected    func(clientAddr string)
-	onClientDisconnected func(clientAddr string, err error)
+	onClientConnected    func(clientID ClientID)
+	onClientDisconnected func(clientID ClientID, err error)
 
 	clientCounter ClientID
 }
 
 // NewTCPServer returns an initialized TCP server ready to start
 // listening for incoming client connections
-func NewTCPServer(maxPacketSize int, onClientConnected func(clientAddr string), onClientDisconnected func(clientAddr string, err error)) (*TCPServer, error) {
+func NewTCPServer(maxPacketSize int, onClientConnected func(clientID ClientID), onClientDisconnected func(clientID ClientID, err error)) (*TCPServer, error) {
 	if maxPacketSize < 1 {
 		return nil, &common.InvalidMaxPacketSizeErr{Size: maxPacketSize}
 	}
@@ -69,9 +69,7 @@ func (s *TCPServer) Start(port string) error {
 				s.connMutex.Unlock()
 			}()
 
-			remoteAddr := conn.RemoteAddr().String()
-
-			s.onClientConnected(remoteAddr)
+			s.onClientConnected(clientID)
 
 			var err error
 			for {
@@ -85,7 +83,7 @@ func (s *TCPServer) Start(port string) error {
 				}
 			}
 
-			s.onClientDisconnected(remoteAddr, err)
+			s.onClientDisconnected(clientID, err)
 		}(clientID, conn)
 	}
 }
