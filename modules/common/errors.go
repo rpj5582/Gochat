@@ -2,6 +2,15 @@ package common
 
 import "fmt"
 
+// InvalidMaxPacketSizeErr is an error thrown when the max packet size is invalid
+type InvalidMaxPacketSizeErr struct {
+	Size int
+}
+
+func (e *InvalidMaxPacketSizeErr) Error() string {
+	return fmt.Sprintf("invalid max packet size of %d", e.Size)
+}
+
 // ListenErr represents an error encountered when trying to
 // listen on a port for incoming connections
 type ListenErr struct {

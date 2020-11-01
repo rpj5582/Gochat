@@ -22,14 +22,18 @@ type TCPClient struct {
 }
 
 // NewTCPClient returns an initialized TCP client ready to connect to a server
-func NewTCPClient(maxPacketSize int) *TCPClient {
+func NewTCPClient(maxPacketSize int) (*TCPClient, error) {
+	if maxPacketSize < 1 {
+		return nil, &common.InvalidMaxPacketSizeErr{Size: maxPacketSize}
+	}
+
 	return &TCPClient{
 		registeredPackets: make(map[uint8]struct {
 			packet   packet.Packet
 			callback func(conn net.Conn, p packet.Packet)
 		}),
 		maxPacketSize: maxPacketSize,
-	}
+	}, nil
 }
 
 func (c *TCPClient) Connect(addr string) error {
@@ -38,7 +42,7 @@ func (c *TCPClient) Connect(addr string) error {
 	if c.conn, err = net.Dial("tcp", addr); err != nil {
 		c.conn = nil
 		c.isConnected = false
-		return common.ConnectErr{
+		return &common.ConnectErr{
 			Host: addr,
 			Err:  err,
 		}
@@ -50,7 +54,7 @@ func (c *TCPClient) Connect(addr string) error {
 
 func (c *TCPClient) Disconnect() error {
 	if !c.isConnected {
-		return common.NotConnectedErr{}
+		return &common.NotConnectedErr{}
 	}
 
 	c.conn = nil
@@ -60,7 +64,7 @@ func (c *TCPClient) Disconnect() error {
 
 func (c *TCPClient) SendPacket(p packet.Packet) error {
 	if !c.isConnected {
-		return common.NotConnectedErr{}
+		return &common.NotConnectedErr{}
 	}
 
 	packetBuffer := make([]byte, c.maxPacketSize)
@@ -73,7 +77,7 @@ func (c *TCPClient) SendPacket(p packet.Packet) error {
 	}
 
 	if _, err := c.conn.Write(packetBuffer[:n+1]); err != nil {
-		return common.SendErr{
+		return &common.SendErr{
 			PacketID: packetID,
 			Err:      err,
 		}
@@ -84,25 +88,25 @@ func (c *TCPClient) SendPacket(p packet.Packet) error {
 
 func (c *TCPClient) ReceivePacket() error {
 	if !c.isConnected {
-		return common.NotConnectedErr{}
+		return &common.NotConnectedErr{}
 	}
 
 	packetBuffer := make([]byte, c.maxPacketSize)
 	n, err := c.conn.Read(packetBuffer)
 	if err != nil {
 		if netErr, ok := err.(net.Error); ok && netErr.Timeout() {
-			return common.TimeoutErr{}
+			return &common.TimeoutErr{}
 		}
 
 		if err == io.EOF {
-			return common.DisconnectErr{}
+			return &common.DisconnectErr{}
 		}
 
-		return common.ReceiveErr{Err: err}
+		return &common.ReceiveErr{Err: err}
 	}
 
 	if n < 1 {
-		return common.ReceiveErr{Err: errors.New("received empty packet")}
+		return &common.ReceiveErr{Err: errors.New("received empty packet")}
 	}
 
 	packetID := packetBuffer[0]
@@ -117,7 +121,10 @@ func (c *TCPClient) ReceivePacket() error {
 		return err
 	}
 
-	p.callback(c.conn, p.packet)
+	if p.callback != nil {
+		p.callback(c.conn, p.packet)
+	}
+
 	return nil
 }
 
