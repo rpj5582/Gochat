@@ -8,9 +8,9 @@ import (
 	"os/signal"
 	"strings"
 
-	"github.com/rpj5582/Gochat/example/common"
-	"github.com/rpj5582/Gochat/modules/packet"
-	"github.com/rpj5582/Gochat/modules/server"
+	"github.com/rpj5582/gochat/example/common"
+	"github.com/rpj5582/gochat/modules/packet"
+	"github.com/rpj5582/gochat/modules/server"
 )
 
 func main() {
@@ -44,7 +44,7 @@ func main() {
 		}
 	}()
 
-	fmt.Println("\nGochat server started, waiting for incoming connections")
+	fmt.Println("\ngochat server started, waiting for incoming connections")
 
 	sigChannel := make(chan os.Signal, 1)
 	signal.Notify(sigChannel, os.Interrupt)

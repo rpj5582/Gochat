@@ -3,7 +3,7 @@ package server
 import (
 	"net"
 
-	"github.com/rpj5582/Gochat/modules/packet"
+	"github.com/rpj5582/gochat/modules/packet"
 )
 
 // Server is an interface for a network server that can accept

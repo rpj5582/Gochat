@@ -8,13 +8,13 @@ import (
 	"os/signal"
 	"strings"
 
-	"github.com/rpj5582/Gochat/example/common"
-	"github.com/rpj5582/Gochat/modules/client"
-	"github.com/rpj5582/Gochat/modules/packet"
+	"github.com/rpj5582/gochat/example/common"
+	"github.com/rpj5582/gochat/modules/client"
+	"github.com/rpj5582/gochat/modules/packet"
 )
 
 func main() {
-	fmt.Println("welcome to Gochat!")
+	fmt.Println("welcome to gochat!")
 	fmt.Print("Enter a server IP to connect to: ")
 
 	reader := bufio.NewReader(os.Stdin)

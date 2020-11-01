@@ -3,7 +3,7 @@ package client
 import (
 	"net"
 
-	"github.com/rpj5582/Gochat/modules/packet"
+	"github.com/rpj5582/gochat/modules/packet"
 )
 
 // Client represents a network client that can communicate with a server,

@@ -5,8 +5,8 @@ import (
 	"io"
 	"net"
 
-	"github.com/rpj5582/Gochat/modules/common"
-	"github.com/rpj5582/Gochat/modules/packet"
+	"github.com/rpj5582/gochat/modules/common"
+	"github.com/rpj5582/gochat/modules/packet"
 )
 
 // TCPClient is a client that can communicate with a server via TCP
