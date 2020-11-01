@@ -3,11 +3,14 @@ package main
 import (
 	"bufio"
 	"fmt"
+	"net"
 	"os"
+	"os/signal"
 	"strings"
-	"time"
 
-	"github.com/rpj5582/Gochat/transport/packet"
+	"github.com/rpj5582/Gochat/example/common"
+	"github.com/rpj5582/Gochat/modules/client"
+	"github.com/rpj5582/Gochat/modules/packet"
 )
 
 func main() {
@@ -35,52 +38,41 @@ func main() {
 		port = "20000"
 	}
 
-	client := TCPClient{TimeoutDuration: time.Second * 10}
-	if err := client.Connect(addr+":"+port, time.Second*10); err != nil {
+	client := client.NewTCPClient(65535)
+	client.RegisterPacketType(&common.PingPacket{}, nil)
+	client.RegisterPacketType(&common.PongPacket{}, nil)
+	client.RegisterPacketType(&common.MessagePacket{}, func(conn net.Conn, p packet.Packet) {
+		messagePacket := p.(*common.MessagePacket)
+		fmt.Println(messagePacket.Message)
+	})
+
+	if err := client.Connect(addr + ":" + port); err != nil {
 		fmt.Println(err)
 		return
 	}
 
 	fmt.Printf("connected to %s\n", addr+":"+port)
 
-	// heartbeat loop
 	go func() {
-		pingPacket := packet.PingPacket{}
 		for {
-			if err := client.SendPacket(&pingPacket); err != nil {
-				fmt.Println(err)
-				client.Disconnect()
-				return
-			}
-
-			_, err := client.ReceivePacket()
+			err := client.ReceivePacket()
 			if err != nil {
 				fmt.Println(err)
 				client.Disconnect()
-				return
+				break
 			}
-
-			time.Sleep(time.Second)
 		}
 	}()
 
 	// Send a test message
-	messagePacket := packet.MessagePacket{Message: "hello world"}
+	messagePacket := common.MessagePacket{Message: "hello world"}
 	if err := client.SendPacket(&messagePacket); err != nil {
 		fmt.Println(err)
 		client.Disconnect()
 		return
 	}
 
-	p, err := client.ReceivePacket()
-	if err != nil {
-		fmt.Println(err)
-		client.Disconnect()
-		return
-	}
-
-	switch p.Type() {
-	case packet.PacketTypeMessage:
-		fmt.Println(messagePacket.Message)
-	}
+	sigChannel := make(chan os.Signal, 1)
+	signal.Notify(sigChannel, os.Interrupt)
+	<-sigChannel
 }
