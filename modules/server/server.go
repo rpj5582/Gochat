@@ -21,8 +21,8 @@ type Server interface {
 	// SendPacket sends the given packet to a given connection
 	SendPacket(conn net.Conn, p common.Packet) error
 
-	// BroadcastPacket sends a packet to all connected clients
-	BroadcastPacket(p common.Packet)
+	// BroadcastPacket sends a packet to all connected clients, with the option to exclude a client
+	BroadcastPacket(p common.Packet, connToExclude net.Conn)
 
 	// ReceivePacket receives the next packet from a connection and calls the
 	// registered callback function associated with the packet type.
