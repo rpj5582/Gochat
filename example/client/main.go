@@ -38,7 +38,12 @@ func main() {
 		port = "20000"
 	}
 
-	client := client.NewTCPClient(65535)
+	client, err := client.NewTCPClient(65535)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+
 	client.RegisterPacketType(&common.PingPacket{}, nil)
 	client.RegisterPacketType(&common.PongPacket{}, nil)
 	client.RegisterPacketType(&common.MessagePacket{}, func(conn net.Conn, p packet.Packet) {
