@@ -48,7 +48,7 @@ func TestTCPServerStartListenFailure(t *testing.T) {
 	assert.NoError(t, err)
 
 	err = s.Start("-1")
-	assert.IsType(t, &common.ListenErr{}, err)
+	assert.IsType(t, &server.ListenErr{}, err)
 }
 
 func TestTCPServerStart(t *testing.T) {
@@ -72,7 +72,7 @@ func TestTCPServerStart(t *testing.T) {
 
 	go func() {
 		err = s.Start("0")
-		assert.IsType(t, &common.AcceptErr{}, err)
+		assert.IsType(t, &server.AcceptErr{}, err)
 	}()
 
 	time.Sleep(time.Millisecond * 10)
@@ -103,7 +103,7 @@ func TestTCPServerAddrSuccess(t *testing.T) {
 
 	go func() {
 		err = s.Start("0")
-		assert.IsType(t, &common.AcceptErr{}, err)
+		assert.IsType(t, &server.AcceptErr{}, err)
 	}()
 
 	time.Sleep(time.Millisecond * 10)
@@ -111,12 +111,24 @@ func TestTCPServerAddrSuccess(t *testing.T) {
 	addr := s.Addr()
 	assert.NotNil(t, addr)
 }
+func TestTCPServerSendPacketInvalidClientID(t *testing.T) {
+	s, err := server.NewTCPServer(10, nil, nil)
+	assert.NotNil(t, s)
+	assert.NoError(t, err)
+
+	err = s.SendPacket(-1, &TestPacket{})
+	assert.IsType(t, &server.InvalidClientID{}, err)
+}
+
 func TestTCPServerSendPacketFailure(t *testing.T) {
 	s, err := server.NewTCPServer(10, nil, nil)
 	assert.NotNil(t, s)
 	assert.NoError(t, err)
 
-	s.SendPacket(&net.TCPConn{}, &TestPacket{})
+	clientID := s.AddNewConnection(&net.TCPConn{})
+
+	err = s.SendPacket(clientID, &TestPacket{})
+	assert.IsType(t, &common.SendErr{}, err)
 }
 
 func TestTCPServerSendPacketSuccess(t *testing.T) {
@@ -126,15 +138,16 @@ func TestTCPServerSendPacketSuccess(t *testing.T) {
 
 	go func() {
 		err = s.Start("0")
-		assert.IsType(t, &common.AcceptErr{}, err)
+		assert.IsType(t, &server.AcceptErr{}, err)
 	}()
 
 	serverConn, clientConn := net.Pipe()
+	clientID := s.AddNewConnection(serverConn)
 
 	var wg sync.WaitGroup
 	wg.Add(1)
 	go func() {
-		s.SendPacket(serverConn, &TestPacket{})
+		s.SendPacket(clientID, &TestPacket{})
 		wg.Done()
 	}()
 
@@ -149,14 +162,14 @@ func TestTCPServerBroadcastPacketToAll(t *testing.T) {
 	assert.NotNil(t, s)
 	assert.NoError(t, err)
 
-	err = s.RegisterPacketType(&TestPacket{}, func(conn net.Conn, p common.Packet) {
-		s.BroadcastPacket(p, nil)
+	err = s.RegisterPacketType(&TestPacket{}, func(clientID server.ClientID, conn net.Conn, p common.Packet) {
+		s.BroadcastPacket(p, -1)
 	})
 	assert.NoError(t, err)
 
 	go func() {
 		err = s.Start("0")
-		assert.IsType(t, &common.AcceptErr{}, err)
+		assert.IsType(t, &server.AcceptErr{}, err)
 	}()
 
 	time.Sleep(time.Millisecond * 10)
@@ -205,15 +218,15 @@ func TestTCPServerBroadcastPacketExcludeSender(t *testing.T) {
 	assert.NotNil(t, s)
 	assert.NoError(t, err)
 
-	err = s.RegisterPacketType(&TestPacket{}, func(conn net.Conn, p common.Packet) {
-		s.BroadcastPacket(p, conn)
+	err = s.RegisterPacketType(&TestPacket{}, func(clientID server.ClientID, conn net.Conn, p common.Packet) {
+		s.BroadcastPacket(p, clientID)
 		conn.Close()
 	})
 	assert.NoError(t, err)
 
 	go func() {
 		err = s.Start("0")
-		assert.IsType(t, &common.AcceptErr{}, err)
+		assert.IsType(t, &server.AcceptErr{}, err)
 	}()
 
 	time.Sleep(time.Millisecond * 10)
@@ -257,17 +270,27 @@ func TestTCPServerBroadcastPacketExcludeSender(t *testing.T) {
 	assert.NotEmpty(t, result2)
 }
 
+func TestTCPServerReceivePacketInvalidClientID(t *testing.T) {
+	s, err := server.NewTCPServer(10, nil, nil)
+	assert.NotNil(t, s)
+	assert.NoError(t, err)
+
+	err = s.ReceivePacket(-1)
+	assert.IsType(t, &server.InvalidClientID{}, err)
+}
+
 func TestTCPServerReceivePacketDisconnected(t *testing.T) {
 	s, err := server.NewTCPServer(10, nil, nil)
 	assert.NotNil(t, s)
 	assert.NoError(t, err)
 
 	serverConn, clientConn := net.Pipe()
+	clientID := s.AddNewConnection(serverConn)
 
 	var wg sync.WaitGroup
 	wg.Add(1)
 	go func() {
-		err = s.ReceivePacket(serverConn)
+		err = s.ReceivePacket(clientID)
 		assert.IsType(t, &common.DisconnectErr{}, err)
 		wg.Done()
 	}()
@@ -283,11 +306,12 @@ func TestTCPServerReceivePacketNotRegistered(t *testing.T) {
 	assert.NoError(t, err)
 
 	serverConn, clientConn := net.Pipe()
+	clientID := s.AddNewConnection(serverConn)
 
 	var wg sync.WaitGroup
 	wg.Add(1)
 	go func() {
-		err = s.ReceivePacket(serverConn)
+		err = s.ReceivePacket(clientID)
 		assert.IsType(t, &common.PacketNotRegisteredErr{}, err)
 		wg.Done()
 	}()
@@ -306,11 +330,12 @@ func TestTCPServerReceivePacketUnmarshalFailure(t *testing.T) {
 	assert.NoError(t, err)
 
 	serverConn, clientConn := net.Pipe()
+	clientID := s.AddNewConnection(serverConn)
 
 	var wg sync.WaitGroup
 	wg.Add(1)
 	go func() {
-		err = s.ReceivePacket(serverConn)
+		err = s.ReceivePacket(clientID)
 		assert.Error(t, err)
 		wg.Done()
 	}()
@@ -327,15 +352,16 @@ func TestTCPServerReceivePacketSuccess(t *testing.T) {
 	assert.NotNil(t, s)
 	assert.NoError(t, err)
 
-	err = s.RegisterPacketType(&TestPacket{}, func(conn net.Conn, p common.Packet) {})
+	err = s.RegisterPacketType(&TestPacket{}, func(clientID server.ClientID, conn net.Conn, p common.Packet) {})
 	assert.NoError(t, err)
 
 	serverConn, clientConn := net.Pipe()
+	clientID := s.AddNewConnection(serverConn)
 
 	var wg sync.WaitGroup
 	wg.Add(1)
 	go func() {
-		err = s.ReceivePacket(serverConn)
+		err = s.ReceivePacket(clientID)
 		assert.NoError(t, err)
 		wg.Done()
 	}()
@@ -352,9 +378,9 @@ func TestTCPServerRegisterPacketType(t *testing.T) {
 	assert.NotNil(t, s)
 	assert.NoError(t, err)
 
-	err = s.RegisterPacketType(&TestPacket{}, func(conn net.Conn, p common.Packet) {})
+	err = s.RegisterPacketType(&TestPacket{}, func(clientID server.ClientID, conn net.Conn, p common.Packet) {})
 	assert.NoError(t, err)
 
-	err = s.RegisterPacketType(&TestPacket{}, func(conn net.Conn, p common.Packet) {})
+	err = s.RegisterPacketType(&TestPacket{}, func(clientID server.ClientID, conn net.Conn, p common.Packet) {})
 	assert.IsType(t, &common.PacketRegisteredErr{}, err)
 }

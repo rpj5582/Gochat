@@ -43,8 +43,6 @@ func main() {
 		return
 	}
 
-	client.RegisterPacketType(&shared.PingPacket{}, nil)
-	client.RegisterPacketType(&shared.PongPacket{}, nil)
 	client.RegisterPacketType(&shared.MessagePacket{}, func(conn net.Conn, p common.Packet) {
 		messagePacket := p.(*shared.MessagePacket)
 		fmt.Println(messagePacket.Message)

@@ -13,16 +13,18 @@ import (
 type TCPServer struct {
 	registeredPackets map[uint8]struct {
 		packet   common.Packet
-		callback func(conn net.Conn, p common.Packet)
+		callback func(clientID ClientID, conn net.Conn, p common.Packet)
 	}
 	maxPacketSize int
 
 	listener    net.Listener
-	connections map[net.Conn]struct{}
-	connMutex   sync.Mutex
+	connections map[ClientID]net.Conn
+	connMutex   sync.RWMutex
 
 	onClientConnected    func(clientAddr string)
 	onClientDisconnected func(clientAddr string, err error)
+
+	clientCounter ClientID
 }
 
 // NewTCPServer returns an initialized TCP server ready to start
@@ -35,10 +37,10 @@ func NewTCPServer(maxPacketSize int, onClientConnected func(clientAddr string), 
 	return &TCPServer{
 		registeredPackets: make(map[uint8]struct {
 			packet   common.Packet
-			callback func(conn net.Conn, p common.Packet)
+			callback func(clientID ClientID, conn net.Conn, p common.Packet)
 		}),
 		maxPacketSize:        maxPacketSize,
-		connections:          make(map[net.Conn]struct{}),
+		connections:          make(map[ClientID]net.Conn),
 		onClientConnected:    onClientConnected,
 		onClientDisconnected: onClientDisconnected,
 	}, nil
@@ -48,24 +50,22 @@ func (s *TCPServer) Start(port string) error {
 	var err error
 	s.listener, err = net.Listen("tcp", ":"+port)
 	if err != nil {
-		return &common.ListenErr{Port: port, Err: err}
+		return &ListenErr{Port: port, Err: err}
 	}
 
 	for {
 		conn, err := s.listener.Accept()
 		if err != nil {
-			return &common.AcceptErr{Err: err}
+			return &AcceptErr{Err: err}
 		}
 
-		s.connMutex.Lock()
-		s.connections[conn] = struct{}{}
-		s.connMutex.Unlock()
+		clientID := s.AddNewConnection(conn)
 
-		go func() {
+		go func(clientID ClientID, conn net.Conn) {
 			defer func() {
 				conn.Close()
 				s.connMutex.Lock()
-				delete(s.connections, conn)
+				delete(s.connections, clientID)
 				s.connMutex.Unlock()
 			}()
 
@@ -75,7 +75,7 @@ func (s *TCPServer) Start(port string) error {
 
 			var err error
 			for {
-				if err = s.ReceivePacket(conn); err != nil {
+				if err = s.ReceivePacket(clientID); err != nil {
 					switch err.(type) {
 					case *common.DisconnectErr:
 						err = nil
@@ -86,15 +86,25 @@ func (s *TCPServer) Start(port string) error {
 			}
 
 			s.onClientDisconnected(remoteAddr, err)
-		}()
+		}(clientID, conn)
 	}
+}
+
+func (s *TCPServer) AddNewConnection(conn net.Conn) ClientID {
+	s.connMutex.Lock()
+	clientID := s.clientCounter
+	s.clientCounter++
+	s.connections[clientID] = conn
+	s.connMutex.Unlock()
+
+	return clientID
 }
 
 func (s *TCPServer) Stop() {
 	s.connMutex.Lock()
 	defer s.connMutex.Unlock()
 
-	for conn := range s.connections {
+	for _, conn := range s.connections {
 		conn.Close()
 	}
 
@@ -110,7 +120,7 @@ func (s *TCPServer) Addr() net.Addr {
 	return nil
 }
 
-func (s *TCPServer) SendPacket(conn net.Conn, p common.Packet) error {
+func (s *TCPServer) SendPacket(clientID ClientID, p common.Packet) error {
 	packetBuffer := make([]byte, s.maxPacketSize)
 	packetBuffer[0] = p.ID()
 
@@ -118,6 +128,14 @@ func (s *TCPServer) SendPacket(conn net.Conn, p common.Packet) error {
 	if err != nil {
 		return err
 	}
+
+	s.connMutex.RLock()
+	conn, ok := s.connections[clientID]
+	if !ok {
+		s.connMutex.RUnlock()
+		return &InvalidClientID{ClientID: clientID}
+	}
+	s.connMutex.RUnlock()
 
 	if _, err := conn.Write(packetBuffer[:n+1]); err != nil {
 		return &common.SendErr{
@@ -129,19 +147,27 @@ func (s *TCPServer) SendPacket(conn net.Conn, p common.Packet) error {
 	return nil
 }
 
-func (s *TCPServer) BroadcastPacket(p common.Packet, connToExclude net.Conn) {
-	s.connMutex.Lock()
-	defer s.connMutex.Unlock()
+func (s *TCPServer) BroadcastPacket(p common.Packet, clientIDToExclude ClientID) {
+	s.connMutex.RLock()
+	defer s.connMutex.RUnlock()
 
-	for conn := range s.connections {
-		if conn != connToExclude {
-			s.SendPacket(conn, p)
+	for clientID := range s.connections {
+		if clientID != clientIDToExclude {
+			s.SendPacket(clientID, p)
 		}
 	}
 }
 
-func (s *TCPServer) ReceivePacket(conn net.Conn) error {
+func (s *TCPServer) ReceivePacket(clientID ClientID) error {
 	packetBuffer := make([]byte, s.maxPacketSize)
+
+	s.connMutex.RLock()
+	conn, ok := s.connections[clientID]
+	if !ok {
+		s.connMutex.RUnlock()
+		return &InvalidClientID{ClientID: clientID}
+	}
+	s.connMutex.RUnlock()
 
 	n, err := conn.Read(packetBuffer)
 	if err != nil {
@@ -172,11 +198,11 @@ func (s *TCPServer) ReceivePacket(conn net.Conn) error {
 		return err
 	}
 
-	p.callback(conn, p.packet)
+	p.callback(clientID, conn, p.packet)
 	return nil
 }
 
-func (s *TCPServer) RegisterPacketType(p common.Packet, receiveCallback func(conn net.Conn, p common.Packet)) error {
+func (s *TCPServer) RegisterPacketType(p common.Packet, receiveCallback func(clientID ClientID, conn net.Conn, p common.Packet)) error {
 	packetID := p.ID()
 	if _, ok := s.registeredPackets[packetID]; ok {
 		return &common.PacketRegisteredErr{PacketID: packetID}
@@ -184,7 +210,7 @@ func (s *TCPServer) RegisterPacketType(p common.Packet, receiveCallback func(con
 
 	s.registeredPackets[packetID] = struct {
 		packet   common.Packet
-		callback func(conn net.Conn, p common.Packet)
+		callback func(clientID ClientID, conn net.Conn, p common.Packet)
 	}{packet: p, callback: receiveCallback}
 
 	return nil

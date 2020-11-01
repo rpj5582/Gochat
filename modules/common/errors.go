@@ -11,43 +11,6 @@ func (e *InvalidMaxPacketSizeErr) Error() string {
 	return fmt.Sprintf("invalid max packet size of %d", e.Size)
 }
 
-// ListenErr represents an error encountered when trying to
-// listen on a port for incoming connections
-type ListenErr struct {
-	Port string
-	Err  error
-}
-
-func (e *ListenErr) Error() string {
-	return fmt.Sprintf("failed to listen on port %s: %v", e.Port, e.Err)
-}
-
-// AcceptErr represents an error accepting a connection
-type AcceptErr struct {
-	Err error
-}
-
-func (e AcceptErr) Error() string {
-	return fmt.Sprintf("could not accept connection: %v", e.Err)
-}
-
-// ConnectErr represents an error establishing a connection
-type ConnectErr struct {
-	Host string
-	Err  error
-}
-
-func (e ConnectErr) Error() string {
-	return fmt.Sprintf("could not connect to %s: %v", e.Host, e.Err)
-}
-
-// NotConnectedErr is returned when a connection is attempting to be used before it is established
-type NotConnectedErr struct{}
-
-func (e NotConnectedErr) Error() string {
-	return "not connected"
-}
-
 // DisconnectErr represents an error that causes a connection to end
 type DisconnectErr struct{}
 

@@ -28,22 +28,18 @@ func main() {
 		port = "20000"
 	}
 
-	server, err := server.NewTCPServer(65535, onClientConnected, onClientDisconnected)
+	serv, err := server.NewTCPServer(65535, onClientConnected, onClientDisconnected)
 	if err != nil {
 		fmt.Println(err)
 		return
 	}
 
-	server.RegisterPacketType(&shared.PingPacket{}, nil)
-	server.RegisterPacketType(&shared.PongPacket{}, func(conn net.Conn, p common.Packet) {
-		server.SendPacket(conn, p)
-	})
-	server.RegisterPacketType(&shared.MessagePacket{}, func(conn net.Conn, p common.Packet) {
-		server.BroadcastPacket(p, conn)
+	serv.RegisterPacketType(&shared.MessagePacket{}, func(clientID server.ClientID, conn net.Conn, p common.Packet) {
+		serv.BroadcastPacket(p, clientID)
 	})
 
 	go func() {
-		if err := server.Start(port); err != nil {
+		if err := serv.Start(port); err != nil {
 			fmt.Println(err)
 			return
 		}
@@ -55,7 +51,7 @@ func main() {
 	signal.Notify(sigChannel, os.Interrupt)
 	<-sigChannel
 
-	server.Stop()
+	serv.Stop()
 	fmt.Println("\nStopping server")
 }
 

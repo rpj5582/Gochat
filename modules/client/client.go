@@ -1,6 +1,7 @@
 package client
 
 import (
+	"fmt"
 	"net"
 
 	"github.com/rpj5582/gochat/modules/common"
@@ -32,4 +33,21 @@ type Client interface {
 	// and associates a callback function to be called when the given packet type is received.
 	// When registering a packet type, pass the zero value for that packet type.
 	RegisterPacketType(p common.Packet, receiveCallback func(conn net.Conn, p common.Packet)) error
+}
+
+// ConnectErr represents an error establishing a connection
+type ConnectErr struct {
+	Host string
+	Err  error
+}
+
+func (e ConnectErr) Error() string {
+	return fmt.Sprintf("could not connect to %s: %v", e.Host, e.Err)
+}
+
+// NotConnectedErr is returned when a connection is attempting to be used before it is established
+type NotConnectedErr struct{}
+
+func (e NotConnectedErr) Error() string {
+	return "not connected"
 }

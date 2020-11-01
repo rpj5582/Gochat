@@ -41,7 +41,7 @@ func (c *TCPClient) Connect(addr string) error {
 	if c.conn, err = net.Dial("tcp", addr); err != nil {
 		c.conn = nil
 		c.isConnected = false
-		return &common.ConnectErr{
+		return &ConnectErr{
 			Host: addr,
 			Err:  err,
 		}
@@ -53,7 +53,7 @@ func (c *TCPClient) Connect(addr string) error {
 
 func (c *TCPClient) Disconnect() error {
 	if !c.isConnected {
-		return &common.NotConnectedErr{}
+		return &NotConnectedErr{}
 	}
 
 	c.conn = nil
@@ -63,7 +63,7 @@ func (c *TCPClient) Disconnect() error {
 
 func (c *TCPClient) Addr() (net.Addr, error) {
 	if !c.isConnected {
-		return nil, &common.NotConnectedErr{}
+		return nil, &NotConnectedErr{}
 	}
 
 	return c.conn.LocalAddr(), nil
@@ -71,7 +71,7 @@ func (c *TCPClient) Addr() (net.Addr, error) {
 
 func (c *TCPClient) ServerAddr() (net.Addr, error) {
 	if !c.isConnected {
-		return nil, &common.NotConnectedErr{}
+		return nil, &NotConnectedErr{}
 	}
 
 	return c.conn.RemoteAddr(), nil
@@ -79,7 +79,7 @@ func (c *TCPClient) ServerAddr() (net.Addr, error) {
 
 func (c *TCPClient) SendPacket(p common.Packet) error {
 	if !c.isConnected {
-		return &common.NotConnectedErr{}
+		return &NotConnectedErr{}
 	}
 
 	packetBuffer := make([]byte, c.maxPacketSize)
@@ -103,7 +103,7 @@ func (c *TCPClient) SendPacket(p common.Packet) error {
 
 func (c *TCPClient) ReceivePacket() error {
 	if !c.isConnected {
-		return &common.NotConnectedErr{}
+		return &NotConnectedErr{}
 	}
 
 	packetBuffer := make([]byte, c.maxPacketSize)

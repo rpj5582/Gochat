@@ -47,7 +47,7 @@ func TestTCPClientConnectFailure(t *testing.T) {
 	assert.NoError(t, err)
 
 	err = c.Connect("127.0.0.1:20000")
-	assert.IsType(t, &common.ConnectErr{}, err)
+	assert.IsType(t, &client.ConnectErr{}, err)
 }
 
 func TestTCPClientConnectSuccess(t *testing.T) {
@@ -68,7 +68,7 @@ func TestTCPClientDisconnectFailure(t *testing.T) {
 	assert.NoError(t, err)
 
 	err = c.Disconnect()
-	assert.IsType(t, &common.NotConnectedErr{}, err)
+	assert.IsType(t, &client.NotConnectedErr{}, err)
 }
 
 func TestTCPClientDisconnectSuccess(t *testing.T) {
@@ -93,7 +93,7 @@ func TestTCPClientAddrNotConnected(t *testing.T) {
 
 	addr, err := c.Addr()
 	assert.Nil(t, addr)
-	assert.IsType(t, &common.NotConnectedErr{}, err)
+	assert.IsType(t, &client.NotConnectedErr{}, err)
 }
 
 func TestTCPClientAddrSuccess(t *testing.T) {
@@ -119,7 +119,7 @@ func TestTCPClientServerAddrNotConnected(t *testing.T) {
 
 	addr, err := c.ServerAddr()
 	assert.Nil(t, addr)
-	assert.IsType(t, &common.NotConnectedErr{}, err)
+	assert.IsType(t, &client.NotConnectedErr{}, err)
 }
 
 func TestTCPClientServerAddrSuccess(t *testing.T) {
@@ -144,7 +144,7 @@ func TestTCPClientSendPacketNotConnected(t *testing.T) {
 	assert.NoError(t, err)
 
 	err = c.SendPacket(&TestPacket{})
-	assert.IsType(t, &common.NotConnectedErr{}, err)
+	assert.IsType(t, &client.NotConnectedErr{}, err)
 }
 
 func TestTCPClientSendPacketFailure(t *testing.T) {
@@ -185,7 +185,7 @@ func TestTCPClientReceivePacketNotConnected(t *testing.T) {
 	assert.NoError(t, err)
 
 	err = c.ReceivePacket()
-	assert.IsType(t, &common.NotConnectedErr{}, err)
+	assert.IsType(t, &client.NotConnectedErr{}, err)
 }
 
 func TestTCPClientReceivePacketDisconnected(t *testing.T) {
