@@ -15,6 +15,12 @@ type Client interface {
 	// Disconnect disconnects the client from the server
 	Disconnect() error
 
+	// Addr returns the address of this connected client
+	Addr() (net.Addr, error)
+
+	// ServerAddr returns the address of the connected server
+	ServerAddr() (net.Addr, error)
+
 	// SendPacket sends the given packet to the server
 	SendPacket(p common.Packet) error
 
