@@ -8,9 +8,9 @@ import (
 	"os/signal"
 	"strings"
 
-	"github.com/rpj5582/gochat/example/common"
+	"github.com/rpj5582/gochat/example/shared"
 	"github.com/rpj5582/gochat/modules/client"
-	"github.com/rpj5582/gochat/modules/packet"
+	"github.com/rpj5582/gochat/modules/common"
 )
 
 func main() {
@@ -44,10 +44,10 @@ func main() {
 		return
 	}
 
-	client.RegisterPacketType(&common.PingPacket{}, nil)
-	client.RegisterPacketType(&common.PongPacket{}, nil)
-	client.RegisterPacketType(&common.MessagePacket{}, func(conn net.Conn, p packet.Packet) {
-		messagePacket := p.(*common.MessagePacket)
+	client.RegisterPacketType(&shared.PingPacket{}, nil)
+	client.RegisterPacketType(&shared.PongPacket{}, nil)
+	client.RegisterPacketType(&shared.MessagePacket{}, func(conn net.Conn, p common.Packet) {
+		messagePacket := p.(*shared.MessagePacket)
 		fmt.Println(messagePacket.Message)
 	})
 
@@ -70,7 +70,7 @@ func main() {
 	}()
 
 	// Send a test message
-	messagePacket := common.MessagePacket{Message: "hello world"}
+	messagePacket := shared.MessagePacket{Message: "hello world"}
 	if err := client.SendPacket(&messagePacket); err != nil {
 		fmt.Println(err)
 		client.Disconnect()
