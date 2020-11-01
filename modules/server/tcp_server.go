@@ -7,14 +7,13 @@ import (
 	"sync"
 
 	"github.com/rpj5582/gochat/modules/common"
-	"github.com/rpj5582/gochat/modules/packet"
 )
 
 // TCPServer is a server that can communicate with clients via TCP
 type TCPServer struct {
 	registeredPackets map[uint8]struct {
-		packet   packet.Packet
-		callback func(conn net.Conn, p packet.Packet)
+		packet   common.Packet
+		callback func(conn net.Conn, p common.Packet)
 	}
 	maxPacketSize int
 
@@ -31,8 +30,8 @@ type TCPServer struct {
 func NewTCPServer(onClientConnected func(clientAddr string), onClientDisconnected func(clientAddr string, err error), maxPacketSize int) *TCPServer {
 	return &TCPServer{
 		registeredPackets: make(map[uint8]struct {
-			packet   packet.Packet
-			callback func(conn net.Conn, p packet.Packet)
+			packet   common.Packet
+			callback func(conn net.Conn, p common.Packet)
 		}),
 		maxPacketSize:        maxPacketSize,
 		connections:          make(map[net.Conn]struct{}),
@@ -96,7 +95,7 @@ func (s *TCPServer) Stop() {
 	s.listener.Close()
 }
 
-func (s *TCPServer) SendPacket(conn net.Conn, p packet.Packet) error {
+func (s *TCPServer) SendPacket(conn net.Conn, p common.Packet) error {
 	packetBuffer := make([]byte, s.maxPacketSize)
 	packetBuffer[0] = p.ID()
 
@@ -150,15 +149,15 @@ func (s *TCPServer) ReceivePacket(conn net.Conn) error {
 	return nil
 }
 
-func (s *TCPServer) RegisterPacketType(p packet.Packet, receiveCallback func(conn net.Conn, p packet.Packet)) error {
+func (s *TCPServer) RegisterPacketType(p common.Packet, receiveCallback func(conn net.Conn, p common.Packet)) error {
 	packetID := p.ID()
 	if _, ok := s.registeredPackets[packetID]; ok {
 		return &common.PacketRegisteredErr{PacketID: packetID}
 	}
 
 	s.registeredPackets[packetID] = struct {
-		packet   packet.Packet
-		callback func(conn net.Conn, p packet.Packet)
+		packet   common.Packet
+		callback func(conn net.Conn, p common.Packet)
 	}{packet: p, callback: receiveCallback}
 
 	return nil

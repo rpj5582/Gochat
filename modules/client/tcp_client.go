@@ -6,14 +6,13 @@ import (
 	"net"
 
 	"github.com/rpj5582/gochat/modules/common"
-	"github.com/rpj5582/gochat/modules/packet"
 )
 
 // TCPClient is a client that can communicate with a server via TCP
 type TCPClient struct {
 	registeredPackets map[uint8]struct {
-		packet   packet.Packet
-		callback func(conn net.Conn, p packet.Packet)
+		packet   common.Packet
+		callback func(conn net.Conn, p common.Packet)
 	}
 	maxPacketSize int
 
@@ -29,8 +28,8 @@ func NewTCPClient(maxPacketSize int) (*TCPClient, error) {
 
 	return &TCPClient{
 		registeredPackets: make(map[uint8]struct {
-			packet   packet.Packet
-			callback func(conn net.Conn, p packet.Packet)
+			packet   common.Packet
+			callback func(conn net.Conn, p common.Packet)
 		}),
 		maxPacketSize: maxPacketSize,
 	}, nil
@@ -62,7 +61,7 @@ func (c *TCPClient) Disconnect() error {
 	return nil
 }
 
-func (c *TCPClient) SendPacket(p packet.Packet) error {
+func (c *TCPClient) SendPacket(p common.Packet) error {
 	if !c.isConnected {
 		return &common.NotConnectedErr{}
 	}
@@ -128,15 +127,15 @@ func (c *TCPClient) ReceivePacket() error {
 	return nil
 }
 
-func (c *TCPClient) RegisterPacketType(p packet.Packet, receiveCallback func(conn net.Conn, p packet.Packet)) error {
+func (c *TCPClient) RegisterPacketType(p common.Packet, receiveCallback func(conn net.Conn, p common.Packet)) error {
 	packetID := p.ID()
 	if _, ok := c.registeredPackets[packetID]; ok {
 		return &common.PacketRegisteredErr{PacketID: packetID}
 	}
 
 	c.registeredPackets[packetID] = struct {
-		packet   packet.Packet
-		callback func(conn net.Conn, p packet.Packet)
+		packet   common.Packet
+		callback func(conn net.Conn, p common.Packet)
 	}{packet: p, callback: receiveCallback}
 
 	return nil

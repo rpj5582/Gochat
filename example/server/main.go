@@ -8,8 +8,8 @@ import (
 	"os/signal"
 	"strings"
 
-	"github.com/rpj5582/gochat/example/common"
-	"github.com/rpj5582/gochat/modules/packet"
+	"github.com/rpj5582/gochat/example/shared"
+	"github.com/rpj5582/gochat/modules/common"
 	"github.com/rpj5582/gochat/modules/server"
 )
 
@@ -29,11 +29,11 @@ func main() {
 	}
 
 	server := server.NewTCPServer(onClientConnected, onClientDisconnected, 65535)
-	server.RegisterPacketType(&common.PingPacket{}, nil)
-	server.RegisterPacketType(&common.PongPacket{}, func(conn net.Conn, p packet.Packet) {
+	server.RegisterPacketType(&shared.PingPacket{}, nil)
+	server.RegisterPacketType(&shared.PongPacket{}, func(conn net.Conn, p common.Packet) {
 		server.SendPacket(conn, p)
 	})
-	server.RegisterPacketType(&common.MessagePacket{}, func(conn net.Conn, p packet.Packet) {
+	server.RegisterPacketType(&shared.MessagePacket{}, func(conn net.Conn, p common.Packet) {
 		server.SendPacket(conn, p)
 	})
 

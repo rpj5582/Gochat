@@ -8,7 +8,6 @@ import (
 
 	"github.com/rpj5582/gochat/modules/client"
 	"github.com/rpj5582/gochat/modules/common"
-	"github.com/rpj5582/gochat/modules/packet"
 	"github.com/stretchr/testify/assert"
 	"golang.org/x/net/nettest"
 )
@@ -234,7 +233,7 @@ func TestTCPClientReceivePacketSuccess(t *testing.T) {
 	assert.NotNil(t, c)
 	assert.NoError(t, err)
 
-	c.RegisterPacketType(&TestPacket{}, func(conn net.Conn, p packet.Packet) {})
+	c.RegisterPacketType(&TestPacket{}, func(conn net.Conn, p common.Packet) {})
 
 	listener, err := nettest.NewLocalListener("tcp")
 	assert.NoError(t, err)
@@ -268,9 +267,9 @@ func TestTCPClientRegisterPacketType(t *testing.T) {
 	assert.NotNil(t, c)
 	assert.NoError(t, err)
 
-	err = c.RegisterPacketType(&TestPacket{}, func(conn net.Conn, p packet.Packet) {})
+	err = c.RegisterPacketType(&TestPacket{}, func(conn net.Conn, p common.Packet) {})
 	assert.NoError(t, err)
 
-	err = c.RegisterPacketType(&TestPacket{}, func(conn net.Conn, p packet.Packet) {})
+	err = c.RegisterPacketType(&TestPacket{}, func(conn net.Conn, p common.Packet) {})
 	assert.IsType(t, &common.PacketRegisteredErr{}, err)
 }
